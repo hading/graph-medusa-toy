@@ -52,3 +52,9 @@ That's a bit complex. To see the two page three objects for the Dogs book:
 
 Those last two don't show up great in the web browser because there are nodes with multiple relationships
 (both :HAS_PAGE and :HAS_MASTER_FILE, for example)
+
+Let's say we want to find all of the pages in book that don't have an ocr file. We could do these two queries
+and take the difference (I don't know how to do this in one step currently):
+
+    Match (b:Book {name:'Dogs'})-[r:HAS_MASTER_FILE]->(p)<-[q:HAS_PAGE]-(b) return b.name,collect(q.page)
+    Match (b:Book {name:'Dogs'})-[r:HAS_OCR_FILE]->(p)<-[q:HAS_PAGE]-(b) return b.name,collect(q.page)
