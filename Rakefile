@@ -111,6 +111,8 @@ task :structure_books do
   #The basic strategy is to create a book object under the collection. This will then have pages, metadata, etc.
   #as described. I'm not trying to get the best model here, just showing how we can relate things back to some model.
   #There are a variety of other ways one might model this.
+  #The nice thing to notice here is that we are able to create our model directly by creating relationships in the
+  #database. So it coexists with our bit-level model.
   db = Neography::Rest.new
   result = db.execute_query(%Q(
       MATCH (books:Collection {name: 'Books'}) RETURN ID(books)
