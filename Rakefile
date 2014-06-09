@@ -36,9 +36,9 @@ task :bit_ingest_collections do
 end
 
 def bit_ingest(full_path, directory_node, db)
-  directory_entries = (Dir[File.join(full_path, '*')] + Dir[File.join(full_path, '.*')]).reject {|entry| %w(. ..).include?(File.basename(entry))}
-  subdirectories = directory_entries.select {|entry| File.directory?(entry)}
-  files = directory_entries.select {|entry| File.file?(entry)}
+  directory_entries = (Dir[File.join(full_path, '*')] + Dir[File.join(full_path, '.*')]).reject { |entry| %w(. ..).include?(File.basename(entry)) }
+  subdirectories = directory_entries.select { |entry| File.directory?(entry) }
+  files = directory_entries.select { |entry| File.file?(entry) }
   #Attach file nodes
   files.each do |file|
     puts "Ingesting #{file}"
@@ -58,12 +58,59 @@ end
 
 desc "Determine a mime type and size for each file asset"
 task :characterize_file_assets do
+  db = Neography::Rest.new
+  #For this example we go over each file asset. If it doesn't have a size then we find its size and store in
+  #the node. If it doesn't have an associated mime type then we find its mime type, create a MimeType node
+  #if we need to, and then associate it to the mime type.
+  #According to how we select the files we could do this collection by collection, etc. Many ways with better control.
+  #But I'm just trying to do it simply here.
+  nodes = db.get_nodes_labeled('FileAsset').collect { |node| Neography::Node.load(node['self'], db) }
+  nodes.each do |node|
+    directory = node.incoming(:HAS_FILE_ASSET).first
+    file_path = File.join(directory.path, node.name)
+    unless node.size
+      node.size = File.size(file_path)
+    end
+    mime_type_node = node.outgoing(:HAS_MIME_TYPE).first
+    unless mime_type_node
+      mime_type = find_mime_type(node.name)
+      mime_type_node = ensure_mime_type_node(mime_type, db)
+      node.outgoing(:HAS_MIME_TYPE) << mime_type_node
+    end
+  end
+end
 
+MIME_TYPE_HASH = {'.txt' => 'text/plain',
+                  '.pdf' => 'application/pdf',
+                  '.jpg' => 'image/jpeg',
+                  '.tiff' => 'image/tiff',
+                  '.xml' => 'application.xml'}
+
+def find_mime_type(file_name)
+  MIME_TYPE_HASH[File.extname(file_name)] || 'application/octet-stream'
+end
+
+def ensure_mime_type_node(mime_type, db)
+  result = db.execute_query(%Q(
+      MERGE (mime_type:MimeType {name: '#{mime_type}'}) RETURN ID(mime_type)
+    ))
+  puts result
+  return Neography::Node.load(result['data'][0][0], db)
 end
 
 desc "Add graph structure to the book objects, e.g. pages, table of contents and index as appropriate, ocr vs. master, metadata"
 task :structure_books do
-
+  #Here we would do some analysis and might determine the following:
+  #Under the books collection, each root directory represents a book with the title given by the directory name
+  #In each book directory there is a metadata directory that may have dublin core and/or mods
+  #In each book directory the contents are directly in that directory and may be in either or both .txt and .pdf form
+  #For our example, .pdf are MASTER_PAGE and .txt are OCR_PAGE
+  #In each book directory there may be a table of contents and/or index represented by toc.xyz and index.xyz
+  #In each book directory there are pages which have the convention page_num.xyz
+  #The following is one way we might encode the above in the database
+  #The basic strategy is to create a book object under the collection. This will then have pages, metadata, etc.
+  #as described. I'm not trying to get the best model here, just showing how we can relate things back to some model.
+  
 end
 
 desc "Add graph structure to the image objects, e.g. access vs. master, metadata, etc."

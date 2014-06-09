@@ -33,6 +33,11 @@ run Cypher queries, etc.
 
 I am not yet an expert (or beyond rank beginner) in neo4j, so don't assume that I'm doing anything well.
 
-Here's a cypher query that will get at the bit level structure:
+Here's a cypher query that will get at the bit level structure. Try it in the browser:
 
     match (c:Collection)-[rd:HAS_BIT_ROOT_DIRECTORY]->(r:Directory)-[:HAS_SUBDIRECTORY*]->(d:Directory)-[:HAS_FILE_ASSET]->(f:FileAsset) return rd, r, d, f
+
+Here's one to see groups by mime type after you've characterized the files:
+
+    match (r:MimeType)<-[:HAS_MIME_TYPE]-(f) return r, f
+
