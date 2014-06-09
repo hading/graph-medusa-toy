@@ -41,3 +41,13 @@ Here's one to see groups by mime type after you've characterized the files:
 
     match (r:MimeType)<-[:HAS_MIME_TYPE]-(f) return r, f
 
+Once the books are structured you might try the following to see the structure of the whole book collection:
+
+    match (c:Collection {name: 'Books'})-[r*]->(n) return c,r, n
+
+That's a bit complex. To see the two page three objects for the Dogs book:
+
+    match (c:BookCollection)-[:HAS_BOOK]->(b:Book{name: 'Dogs'})-[:HAS_PAGE {page: 3}]->(p) return c,b,p
+
+Those last two don't show up great in the web browser because there are nodes with multiple relationships
+(both :HAS_PAGE and :HAS_MASTER_FILE, for example)

@@ -104,13 +104,51 @@ task :structure_books do
   #Under the books collection, each root directory represents a book with the title given by the directory name
   #In each book directory there is a metadata directory that may have dublin core and/or mods
   #In each book directory the contents are directly in that directory and may be in either or both .txt and .pdf form
-  #For our example, .pdf are MASTER_PAGE and .txt are OCR_PAGE
+  #For our example, .pdf are masters and .txt are ocr
   #In each book directory there may be a table of contents and/or index represented by toc.xyz and index.xyz
   #In each book directory there are pages which have the convention page_num.xyz
   #The following is one way we might encode the above in the database
   #The basic strategy is to create a book object under the collection. This will then have pages, metadata, etc.
   #as described. I'm not trying to get the best model here, just showing how we can relate things back to some model.
-  
+  #There are a variety of other ways one might model this.
+  db = Neography::Rest.new
+  result = db.execute_query(%Q(
+      MATCH (books:Collection {name: 'Books'}) RETURN ID(books)
+    ))
+  collection_node = Neography::Node.load(result['data'][0][0], db)
+  db.add_label(collection_node, "BookCollection")
+  book_directory_nodes = collection_node.outgoing(:HAS_BIT_ROOT_DIRECTORY).first.outgoing(:HAS_SUBDIRECTORY).to_a
+  book_directory_nodes.each do |book_directory_node|
+    book_node = Neography::Node.create('name' => File.basename(book_directory_node.path).capitalize)
+    collection_node.outgoing(:HAS_BOOK) << book_node
+    db.add_label(book_node, "Book")
+    metadata_directory_node = book_directory_node.outgoing(:HAS_SUBDIRECTORY).detect { |node| File.basename(node.path) == 'metadata' }
+    if dc_node = metadata_directory_node.outgoing(:HAS_FILE).detect { |node| node.name == 'dc.xml' }
+      book_node.outgoing(:HAS_DC_METADATA_FILE) << dc_node
+    end
+    if mods_node = metadata_directory_node.outgoing(:HAS_FILE).detect { |node| node.name == 'mods.xml' }
+      book_node.outgoing(:HAS_MODS_METADATA_FILE) << mods_node
+    end
+    book_directory_node.outgoing(:HAS_FILE_ASSET).select { |node| node.name.match(/^toc/) }.each do |table_of_contents_node|
+      book_node.outgoing(:HAS_TABLE_OF_CONTENTS_FILE) << table_of_contents_node
+      book_node.outgoing(:HAS_MASTER_FILE) if table_of_contents_node.name.match(/pdf$/)
+      book_node.outgoing(:HAS_OCR_FILE) if table_of_contents_node.name.match(/txt$/)
+    end
+    book_directory_node.outgoing(:HAS_FILE_ASSET).select { |node| node.name.match(/^index/) }.each do |table_of_contents_node|
+      book_node.outgoing(:HAS_INDEX_FILE) << table_of_contents_node
+      book_node.outgoing(:HAS_MASTER_FILE) << table_of_contents_node if table_of_contents_node.name.match(/pdf$/)
+      book_node.outgoing(:HAS_OCR_FILE) << table_of_contents_node if table_of_contents_node.name.match(/txt$/)
+    end
+    book_directory_node.outgoing(:HAS_FILE_ASSET).select { |node| node.name.match(/^page/) }.each do |page_node|
+      page_node.name.match(/^page_(\d+)\.(.*)/)
+      page_number = $1.to_i
+      extension = $2
+      relationship = Neography::Relationship.create(:HAS_PAGE, book_node, page_node)
+      relationship[:page] = page_number
+      book_node.outgoing(:HAS_MASTER_FILE) << page_node if extension == 'pdf'
+      book_node.outgoing(:HAS_OCR_FILE) << page_node if extension == 'txt'
+    end
+  end
 end
 
 desc "Add graph structure to the image objects, e.g. access vs. master, metadata, etc."
