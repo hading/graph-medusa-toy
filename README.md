@@ -26,7 +26,8 @@ Run rake tasks in order to build up the structure:
 
 See the individual rake tasks for more information about what each is supposed to illustrate.
 
-A rake task create_whole_database will run all of the above in order.
+A rake task create_whole_database will run all of the above in order (or at least the ones that are currently
+implemented).
 
 As you go along you can use the neo4j-shell or the web console at http://localhost:7474 to play with things,
 run Cypher queries, etc.
