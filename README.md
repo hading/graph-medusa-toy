@@ -29,4 +29,10 @@ See the individual rake tasks for more information about what each is supposed t
 A rake task create_whole_database will run all of the above in order.
 
 As you go along you can use the neo4j-shell or the web console at http://localhost:7474 to play with things,
-run Cyber queries, etc.
+run Cypher queries, etc.
+
+I am not yet an expert (or beyond rank beginner) in neo4j, so don't assume that I'm doing anything well.
+
+Here's a cypher query that will get at the bit level structure:
+
+    match (c:Collection)-[rd:HAS_BIT_ROOT_DIRECTORY]->(r:Directory)-[:HAS_SUBDIRECTORY*]->(d:Directory)-[:HAS_FILE_ASSET]->(f:FileAsset) return rd, r, d, f
