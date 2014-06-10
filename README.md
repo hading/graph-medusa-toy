@@ -58,3 +58,14 @@ and take the difference (I don't know how to do this in one step currently):
 
     Match (b:Book {name:'Dogs'})-[r:HAS_MASTER_FILE]->(p)<-[q:HAS_PAGE]-(b) return b.name,collect(q.page)
     Match (b:Book {name:'Dogs'})-[r:HAS_OCR_FILE]->(p)<-[q:HAS_PAGE]-(b) return b.name,collect(q.page)
+
+Okay, here's how to do it in one query:
+
+    match (p)<-[r:HAS_PAGE]-(b:Book {name: 'Dogs'})-[q:HAS_MASTER_FILE]->(p)
+    with r,  b
+    optional match (b)-[q:HAS_OCR_FILE]->(s:FileAsset)<-[t:HAS_PAGE {page: r.page}]->(b)
+    with r,s where s is null
+    return collect(r.page)
+
+The key here is that putting a where clause with a match doesn't post filter the match, it puts a constraint on the match.
+To filter after the match is done you need to use where in the with clause.
