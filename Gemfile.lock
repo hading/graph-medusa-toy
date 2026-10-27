@@ -13,7 +13,7 @@ GEM
       rubyzip (>= 1.0.0)
     os (1.1.1)
     rake (13.0.6)
-    rubyzip (2.3.2)
+    rubyzip (3.4.0)
 
 PLATFORMS
   ruby
